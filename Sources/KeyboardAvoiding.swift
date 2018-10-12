@@ -36,7 +36,7 @@ import UIKit
         }
     }
     public static var keyboardAvoidingMode = KeyboardAvoidingMode.minimum
-    public static var avoidingBlock: ((Bool, CGFloat, CGFloat, UIViewAnimationOptions)->Void)? {
+    public static var avoidingBlock: ((Bool, CGFloat, CGFloat, UIView.AnimationOptions)->Void)? {
         willSet {
             self.initialise()
         }
@@ -60,15 +60,15 @@ import UIKit
         var isKeyBoardShowing = false
         // isKeyBoardShowing and is it merged and docked.
         
-        let isPortrait = UIInterfaceOrientationIsPortrait(UIApplication.shared.statusBarOrientation)
+        let isPortrait = UIApplication.shared.statusBarOrientation.isPortrait
         // get the keyboard & window frames
         
-        let keyboardFrame = notification.userInfo![UIKeyboardFrameEndUserInfoKey] as! CGRect
+        let keyboardFrame = notification.userInfo![UIResponder.keyboardFrameEndUserInfoKey] as! CGRect
         // keyboardHeightDiff used when user is switching between different keyboards that have different heights
-        var keyboardFrameBegin = notification.userInfo![UIKeyboardFrameBeginUserInfoKey] as! CGRect
+        var keyboardFrameBegin = notification.userInfo![UIResponder.keyboardFrameBeginUserInfoKey] as! CGRect
         
         // hack for bug in iOS 11.2
-        let keyboardFrameEnd = notification.userInfo![UIKeyboardFrameEndUserInfoKey] as! CGRect
+        let keyboardFrameEnd = notification.userInfo![UIResponder.keyboardFrameEndUserInfoKey] as! CGRect
         keyboardFrameBegin = CGRect(x: keyboardFrameBegin.origin.x, y: keyboardFrameBegin.origin.y, width: keyboardFrameBegin.size.width, height: keyboardFrameEnd.size.height)
 
         var keyboardHeightDiff:CGFloat = 0.0
@@ -76,7 +76,7 @@ import UIKit
             keyboardHeightDiff = keyboardFrameBegin.size.height - keyboardFrame.size.height
         }
         let screenSize = UIScreen.main.bounds.size
-        let animationCurve = notification.userInfo![UIKeyboardAnimationCurveUserInfoKey] as! Int
+        let animationCurve = notification.userInfo![UIResponder.keyboardAnimationCurveUserInfoKey] as! Int
         let animationOptions = animationCurve << 16
         // if split keyboard is being dragged, then skip notification
         
@@ -95,7 +95,7 @@ import UIKit
         }
         
         // get animation duration
-        var animationDuration = notification.userInfo![UIKeyboardAnimationDurationUserInfoKey] as! CGFloat
+        var animationDuration = notification.userInfo![UIResponder.keyboardAnimationDurationUserInfoKey] as! CGFloat
         if animationDuration == 0 {
             // custom keyboards often dont animate, its too clanky so have to manually set this
             animationDuration = 0.1
@@ -176,7 +176,7 @@ import UIKit
                             self.avoidingView!.superview!.setNeedsUpdateConstraints()
                         }
                         
-                        UIView.animate(withDuration: TimeInterval(animationDuration), delay: TimeInterval(delay), options: UIViewAnimationOptions(rawValue: UInt(animationOptions)), animations: {() -> Void in
+                        UIView.animate(withDuration: TimeInterval(animationDuration), delay: TimeInterval(delay), options: UIView.AnimationOptions(rawValue: UInt(animationOptions)), animations: {() -> Void in
                             if self.avoidingViewUsesAutoLayout {
                                 self.avoidingView!.superview!.layoutIfNeeded()
                                 // to animate constraint changes
@@ -192,7 +192,7 @@ import UIKit
                     }
                 }
                 if self.avoidingBlock != nil {
-                    self.avoidingBlock!(isKeyBoardShowing, animationDuration, keyboardFrame.size.height, UIViewAnimationOptions(rawValue: UInt(animationOptions)))
+                    self.avoidingBlock!(isKeyBoardShowing, animationDuration, keyboardFrame.size.height, UIView.AnimationOptions(rawValue: UInt(animationOptions)))
                 }
             }
             
@@ -219,7 +219,7 @@ import UIKit
                     }
                     self.avoidingView!.superview!.setNeedsUpdateConstraints()
                 }
-                UIView.animate(withDuration: TimeInterval(animationDuration + CGFloat(0.075)), delay: 0, options: UIViewAnimationOptions(rawValue: UInt(animationOptions)), animations: {() -> Void in
+                UIView.animate(withDuration: TimeInterval(animationDuration + CGFloat(0.075)), delay: 0, options: UIView.AnimationOptions(rawValue: UInt(animationOptions)), animations: {() -> Void in
                     if self.avoidingViewUsesAutoLayout {
                         self.avoidingView!.superview!.layoutIfNeeded()
                     }
@@ -234,7 +234,7 @@ import UIKit
                 })
             }
             if self.avoidingBlock != nil {
-                self.avoidingBlock!(isKeyBoardShowing, animationDuration + 0.075, 0, UIViewAnimationOptions(rawValue: UInt(animationOptions)))
+                self.avoidingBlock!(isKeyBoardShowing, animationDuration + 0.075, 0, UIView.AnimationOptions(rawValue: UInt(animationOptions)))
             }
         }
         self.isKeyboardVisible = CGRect(x: CGFloat(0), y: CGFloat(0), width: CGFloat(screenSize.width), height: CGFloat(screenSize.height)).intersects(keyboardFrame)
@@ -269,7 +269,7 @@ import UIKit
     }
     
     public class func removeTriggerView(_ triggerView: UIView) {
-        if let index = triggerViews.index(of: triggerView) as Int! {
+        if let index = triggerViews.index(of: triggerView) {
             self.triggerViews.remove(at: index)
         }
     }
@@ -283,11 +283,11 @@ import UIKit
     private class func initialise() {
         // make sure we only add this once
         if self.avoidingBlock == nil && self.avoidingView == nil {
-            NotificationCenter.default.addObserver(forName: NSNotification.Name.UIApplicationDidEnterBackground, object: nil, queue: OperationQueue.main, using: { notification in
+            NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: OperationQueue.main, using: { notification in
                 // Autolayout is reset when app goes into background, so we need to dismiss the keyboard too
                 UIApplication.shared.windows.first?.rootViewController?.view.endEditing(true)
             })
-            NotificationCenter.default.addObserver(forName: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil, queue: OperationQueue.main, using: { notification in
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: OperationQueue.main, using: { notification in
                 self.didChange(notification)
             })
         }
